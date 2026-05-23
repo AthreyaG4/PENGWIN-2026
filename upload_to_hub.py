@@ -1,36 +1,82 @@
+import json
+import os
 from pathlib import Path
 
-from datasets import Dataset, DatasetDict, Nifti
+import numpy as np
+from datasets import Dataset, DatasetDict
+from dotenv import load_dotenv
 
-DATASET_DIR = Path(__file__).parent / "dataset"
+load_dotenv()
+
+DATASET_DIR = Path(__file__).parent / "dataset" / "anatomy_segmentation"
 
 
-def load_split(split: str) -> Dataset:
-    split_dir = DATASET_DIR / split
-    image_files = sorted(split_dir.glob("images/*.nii.gz"))
-    label_files = sorted(split_dir.glob("labels/*.nii.gz"))
+def read_metadata(split: str) -> dict[str, dict]:
+    records = json.loads((DATASET_DIR / split / "metadata.json").read_text())
+    return {r["patient_id"]: r for r in records}
 
-    ds = Dataset.from_dict(
-        {
-            "nifti": [str(f) for f in image_files],
-            "label": [str(f) for f in label_files],
+
+def train_generator():
+    split_dir = DATASET_DIR / "train"
+    meta_by_patient = read_metadata("train")
+    patch_files = sorted(split_dir.glob("patient_*_patch_*.npz"))
+
+    for f in patch_files:
+        pid = f.stem.split("_patch_")[0]
+        m = meta_by_patient[pid]
+        npz = np.load(f)
+        yield {
+            "image": npz["image"],
+            "label": npz["label"],
+            "patient_id": pid,
+            "original_spacing": m["original_spacing"],
+            "original_shape": m["original_shape"],
+            "original_affine": m["original_affine"],
         }
-    )
-    ds = ds.cast_column("nifti", Nifti())
-    ds = ds.cast_column("label", Nifti())
-    return ds
+
+
+def eval_generator(split: str):
+    split_dir = DATASET_DIR / split
+    meta_by_patient = read_metadata(split)
+    case_files = sorted(split_dir.glob("patient_???.npz"))
+
+    for f in case_files:
+        pid = f.stem
+        m = meta_by_patient[pid]
+        npz = np.load(f)
+        yield {
+            "image": npz["image"],
+            "label": npz["label"],
+            "patient_id": pid,
+            "original_spacing": m["original_spacing"],
+            "original_shape": m["original_shape"],
+            "original_affine": m["original_affine"],
+        }
 
 
 dataset = DatasetDict(
     {
-        "train": load_split("train"),
-        "validation": load_split("validation"),
-        "test": load_split("test"),
+        "train": Dataset.from_generator(
+            train_generator,
+            writer_batch_size=100,
+        ),
+        "validation": Dataset.from_generator(
+            eval_generator,
+            gen_kwargs={"split": "validation"},
+            writer_batch_size=100,
+        ),
+        "test": Dataset.from_generator(
+            eval_generator,
+            gen_kwargs={"split": "test"},
+            writer_batch_size=100,
+        ),
     }
 )
+dataset = dataset.with_format("numpy")
 
 dataset.push_to_hub(
-    "AG2307/pengwin-2026-nifti",
+    "AG2307/pengwin-2026-anatomy-segmentation",
     private=False,
-    num_shards={"train": 16, "validation": 2, "test": 2},
+    num_shards={"train": 16, "validation": 3, "test": 3},
+    token=os.getenv("hf_auth_token"),
 )

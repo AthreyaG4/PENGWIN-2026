@@ -8,6 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+.env
 
 /dataset
 /19732767
+*.ipynb
