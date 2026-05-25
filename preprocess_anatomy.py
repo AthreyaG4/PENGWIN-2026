@@ -19,8 +19,8 @@ from monai.transforms import (
 SOURCE_DIR = Path(__file__).parent / "19732767"
 OUTPUT_DIR = Path(__file__).parent / "dataset" / "anatomy_segmentation"
 
-SPLITS = ["train", "validation", "test"]
-SPLIT_RATIOS = {"train": 0.80, "validation": 0.10, "test": 0.10}
+SPLITS = ["train", "validation"]
+SPLIT_RATIOS = {"train": 0.80, "validation": 0.20}
 RANDOM_SEED = 42
 
 HU_MIN, HU_MAX = -175, 250
@@ -116,11 +116,9 @@ def split_cases(cases: list[Path]) -> dict[str, list[Path]]:
     random.shuffle(shuffled)
     n = len(shuffled)
     train_n = round(n * SPLIT_RATIOS["train"])
-    val_n = round(n * SPLIT_RATIOS["validation"])
     return {
         "train": shuffled[:train_n],
-        "validation": shuffled[train_n : train_n + val_n],
-        "test": shuffled[train_n + val_n :],
+        "validation": shuffled[train_n:],
     }
 
 
@@ -215,7 +213,9 @@ def main():
     for split in SPLITS:
         n_pelvic = len(pelvic_splits[split])
         n_femur = len(femur_splits[split])
-        print(f"  {split}: {n_pelvic + n_femur} ({n_pelvic} pelvic + {n_femur} femur)")
+        print(
+            f"  {split:12s}: {n_pelvic + n_femur:3d} ({n_pelvic} pelvic + {n_femur} femur)"
+        )
 
 
 if __name__ == "__main__":

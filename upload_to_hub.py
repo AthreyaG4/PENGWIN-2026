@@ -21,6 +21,8 @@ def train_generator():
     meta_by_patient = read_metadata("train")
     patch_files = sorted(split_dir.glob("patient_*_patch_*.npz"))
 
+    print(f"Found {len(patch_files)} patch files for training.")
+
     for f in patch_files:
         pid = f.stem.split("_patch_")[0]
         m = meta_by_patient[pid]
@@ -35,9 +37,9 @@ def train_generator():
         }
 
 
-def eval_generator(split: str):
-    split_dir = DATASET_DIR / split
-    meta_by_patient = read_metadata(split)
+def eval_generator():
+    split_dir = DATASET_DIR / "validation"
+    meta_by_patient = read_metadata("validation")
     case_files = sorted(split_dir.glob("patient_???.npz"))
 
     for f in case_files:
@@ -62,13 +64,7 @@ dataset = DatasetDict(
         ),
         "validation": Dataset.from_generator(
             eval_generator,
-            gen_kwargs={"split": "validation"},
-            writer_batch_size=100,
-        ),
-        "test": Dataset.from_generator(
-            eval_generator,
-            gen_kwargs={"split": "test"},
-            writer_batch_size=100,
+            writer_batch_size=5,
         ),
     }
 )
@@ -77,6 +73,6 @@ dataset = dataset.with_format("numpy")
 dataset.push_to_hub(
     "AG2307/pengwin-2026-anatomy-segmentation",
     private=False,
-    num_shards={"train": 16, "validation": 3, "test": 3},
+    num_shards={"train": 16, "validation": 4},
     token=os.getenv("hf_auth_token"),
 )
