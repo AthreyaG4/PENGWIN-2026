@@ -16,7 +16,7 @@ from monai.transforms import (
     Spacingd,
 )
 
-SOURCE_DIR = Path(__file__).parent / "19732767"
+SOURCE_DIR = Path(__file__).parent.parent / "19732767"
 OUTPUT_DIR = Path(__file__).parent / "dataset" / "anatomy_segmentation"
 
 SPLITS = ["train", "validation"]
@@ -84,17 +84,19 @@ _rand_crop = RandCropByPosNegLabeld(
 )
 
 
-def preprocess(image_src: Path, label_src: Path) -> tuple[dict, dict]:
+def preprocess(
+    image_src: Path, label_src: Path, remap: RemapLabelsd
+) -> tuple[dict, dict]:
     data = {"image": str(image_src), "label": str(label_src)}
     data = _load(data)
     data = _ensure_channel(data)
-    data = _remap(data)
+    data = remap(data)
+    data = _orient(data)
     meta = {
         "original_spacing": data["image"].pixdim.tolist(),
         "original_shape": list(data["image"].shape),
         "original_affine": data["image"].affine.tolist(),
     }
-    data = _orient(data)
     data = _spacing(data)
     data = _crop_fg(data)
     data = _scale(data)
