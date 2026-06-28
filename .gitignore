@@ -10,6 +10,5 @@ wheels/
 .venv
 .env
 
-/Experiment 1/dataset
-/Experiment 2/dataset
+/dataset
 /19732767
