@@ -1,7 +1,7 @@
 from pathlib import Path
 import numpy as np
 
-BASE = Path("Experiment 2/dataset/fracture_segmentation")
+BASE = Path("../dataset/fracture_segmentation")
 
 for split in ("train", "validation"):
     files = sorted((BASE / split).glob("patient_*.npz"))

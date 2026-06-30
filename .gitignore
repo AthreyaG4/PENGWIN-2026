@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+*.tar.gz
 
 # Virtual environments
 .venv
@@ -12,3 +13,4 @@ wheels/
 
 /dataset
 /19732767
+/checkpoints
